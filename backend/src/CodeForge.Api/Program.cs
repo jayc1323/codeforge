@@ -1,5 +1,6 @@
 using CodeForge.Api.Execution;
 using CodeForge.Api.Hubs;
+using CodeForge.Api.Lsp;
 using CodeForge.Core.Execution;
 using CodeForge.Infrastructure;
 
@@ -28,9 +29,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 
+app.UseWebSockets();
+
 app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ExecutionHub>("/hubs/executions");
+app.MapLspEndpoints();
 
 app.Run();

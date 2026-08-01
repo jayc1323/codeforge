@@ -5,6 +5,10 @@ import { RouterLink } from '@angular/router';
 import { Execution, ExecutionService, Language, STATUS_LABELS } from '../services/execution.service';
 import { ExecutionStreamService } from '../services/execution-stream.service';
 import { MonacoLoaderService } from '../services/monaco-loader.service';
+import { LspClient } from '../services/lsp/lsp-client';
+import { attachLsp } from '../services/lsp/monaco-lsp';
+
+const PYTHON_LSP_URI = 'file:///scratch/main.py';
 
 const MONACO_LANGUAGE: Record<string, string> = {
   python: 'python',
@@ -41,6 +45,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   private editor: any;
   private monaco: any;
   private pollTimer: any;
+  private lspDispose: (() => void) | null = null;
 
   languages: Language[] = [];
   selectedLanguage = 'python';
@@ -63,14 +68,36 @@ export class EditorComponent implements OnInit, OnDestroy {
     });
 
     this.monaco = await this.monacoLoader.load();
+    const model = this.monaco.editor.createModel(
+      SAMPLES[this.selectedLanguage],
+      MONACO_LANGUAGE[this.selectedLanguage],
+      this.monaco.Uri.parse(PYTHON_LSP_URI));
     this.editor = this.monaco.editor.create(this.editorContainer.nativeElement, {
-      value: SAMPLES[this.selectedLanguage],
-      language: MONACO_LANGUAGE[this.selectedLanguage],
+      model,
       theme: this.monacoTheme,
       automaticLayout: true,
       minimap: { enabled: false },
       fontSize: 14
     });
+    await this.startLspIfSupported();
+  }
+
+  private async startLspIfSupported(): Promise<void> {
+    this.lspDispose?.();
+    this.lspDispose = null;
+
+    if (this.selectedLanguage !== 'python') return;
+
+    const model = this.editor.getModel();
+    const client = new LspClient('python', 'python', PYTHON_LSP_URI);
+    client.getText = () => model.getValue();
+
+    try {
+      await client.connect();
+      this.lspDispose = attachLsp(this.monaco, this.editor, client, 'python');
+    } catch {
+      // Language server unavailable — editor still works without IntelliSense.
+    }
   }
 
   get monacoTheme(): string {
@@ -84,16 +111,18 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.lspDispose?.();
     this.editor?.dispose();
     clearInterval(this.pollTimer);
   }
 
-  onLanguageChange(): void {
+  async onLanguageChange(): Promise<void> {
     const model = this.editor?.getModel();
     if (model) {
       this.monaco.editor.setModelLanguage(model, MONACO_LANGUAGE[this.selectedLanguage] ?? 'plaintext');
       model.setValue(SAMPLES[this.selectedLanguage] ?? '');
     }
+    await this.startLspIfSupported();
   }
 
   run(): void {
