@@ -33,7 +33,7 @@ cd backend && dotnet test
 - Store is in-memory; swap for a real DB later.
 - Known cosmetic issue: F# in offline container prints "An issue was encountered verifying workloads" to stdout before program output.
 
-## Progress (as of 2026-07-30)
+## Progress (as of 2026-08-01)
 DONE:
 - [x] .NET 8 backend: Api / Core / Infrastructure layers, xUnit tests (21 passing)
 - [x] SignalR live streaming: output chunks pushed as produced (verified ~1s apart over ws through the proxy), polling kept as fallback
@@ -42,9 +42,10 @@ DONE:
 - [x] Languages: python, cpp, csharp, fsharp, typescript (tsx) — versions detected at runtime via LanguageInfoService (cached, shown in UI dropdown)
 - [x] Angular 17 frontend: Monaco editor, per-language samples, stdin box, status chips, stdout/stderr panels, /api proxy, light/dark theme toggle (localStorage)
 - [x] End-to-end verified through the Angular proxy (4200 -> 5045) with Docker runner active
+- [x] Python LSP (Pyright) IntelliSense: backend LspBridge maps /lsp/{language} WebSocket -> pyright-langserver stdio (one server process per browser session, killed on disconnect); frontend LspClient + monaco-lsp wiring (completion, hover, diagnostics markers); lazily started when Python is selected. Verified initialize handshake through the proxy.
 
 ## Next steps (priority order)
-0. Full IntelliSense: TypeScript has it free via Monaco; other languages need LSP servers (pylsp, clangd, csharp-ls, fsautocomplete) + monaco-languageclient over WebSocket — lazy-start one at a time on this 4GB box
+0. Full IntelliSense for other languages: add clangd (C/C++), csharp-ls, fsautocomplete to LspBridge.Servers + frontend languageId mapping. Same LspClient/monaco-lsp wiring — just register per language.
 0.5. Warm container pool: `docker exec` into pre-warmed containers (~0.19s vs ~0.9s spin-up); needs between-run hygiene (wipe /work+/tmp, kill stray PIDs) and pool lifecycle management
 1. Persistence: replace InMemoryExecutionStore with PostgreSQL + EF Core (execution history, saved snippets)
 2. Production deploy: domain + Caddy (auto TLS) on this droplet, serve `ng build` static files, proxy /api+/hubs (ws) to API. NOT DO App Platform — it has no Docker socket, execution engine can't run there. Add auth/rate-limit before public exposure.
