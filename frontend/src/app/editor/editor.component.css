@@ -25,6 +25,21 @@
   font-weight: 700;
   font-size: 18px;
   color: #569cd6;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.docs-link {
+  color: #9cdcfe;
+  text-decoration: none;
+  font-size: 13px;
+  padding: 5px 10px;
+  border: 1px solid #555;
+  border-radius: 4px;
+}
+
+.docs-link:hover {
+  background: #3c3c3c;
 }
 
 select, textarea {
@@ -162,10 +177,15 @@ pre {
 
 :host(.light) select,
 :host(.light) textarea,
-:host(.light) .theme-btn {
+:host(.light) .theme-btn,
+:host(.light) .docs-link {
   background: #ffffff;
   color: #333;
   border-color: #bbb;
+}
+
+:host(.light) .docs-link {
+  color: #006ab1;
 }
 
 :host(.light) .side-pane {

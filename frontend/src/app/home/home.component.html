@@ -1,0 +1,34 @@
+<div class="page">
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+  <div class="grid-overlay"></div>
+
+  <nav class="nav">
+    <span class="logo">CodeForge</span>
+    <a class="nav-cta" routerLink="/app">Login</a>
+  </nav>
+
+  <main class="hero">
+    <p class="eyebrow">// sandboxed code execution</p>
+    <h1>Write code.<br />Run it <span class="accent">instantly</span>.</h1>
+    <p class="sub">
+      A multi-language playground with a real editor, live output streaming,
+      and every execution sealed inside its own container.
+    </p>
+
+    <div class="chips">
+      <span class="chip" *ngFor="let lang of languages">{{ lang }}</span>
+    </div>
+
+    <div class="actions">
+      <a class="cta" routerLink="/app">Login</a>
+      <span class="hint">no account needed yet — this button leads straight into the app</span>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <span>Monaco editor</span>
+    <span>Docker-isolated runs</span>
+    <span>SignalR live streaming</span>
+  </footer>
+</div>

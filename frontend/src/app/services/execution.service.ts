@@ -15,6 +15,7 @@ export interface Language {
   id: string;
   displayName: string;
   version: string;
+  docsUrl: string;
 }
 
 export interface SubmitExecutionRequest {

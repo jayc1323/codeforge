@@ -11,7 +11,8 @@ public static class LanguageRegistry
                 SourceFileName: "main.py",
                 Compile: null,
                 Run: new CommandTemplate("python3", "main.py"),
-                VersionCommand: new CommandTemplate("python3", "--version")),
+                VersionCommand: new CommandTemplate("python3", "--version"),
+                DocsUrl: "https://docs.python.org/3/"),
 
             ["cpp"] = new LanguageDefinition(
                 Id: "cpp",
@@ -19,7 +20,8 @@ public static class LanguageRegistry
                 SourceFileName: "main.cpp",
                 Compile: new CommandTemplate("g++", "-O2 -std=c++20 -o main main.cpp"),
                 Run: new CommandTemplate("./main", ""),
-                VersionCommand: new CommandTemplate("g++", "--version")),
+                VersionCommand: new CommandTemplate("g++", "--version"),
+                DocsUrl: "https://en.cppreference.com/w/"),
 
             ["csharp"] = new LanguageDefinition(
                 Id: "csharp",
@@ -28,6 +30,7 @@ public static class LanguageRegistry
                 Compile: new CommandTemplate("dotnet", "build -c Release -v q --nologo"),
                 Run: new CommandTemplate("dotnet", "bin/Release/net8.0/Main.dll"),
                 VersionCommand: new CommandTemplate("dotnet", "--version"),
+                DocsUrl: "https://learn.microsoft.com/en-us/dotnet/csharp/",
                 ExtraFiles: new Dictionary<string, string>
                 {
                     ["Main.csproj"] = """
@@ -51,6 +54,7 @@ public static class LanguageRegistry
                 Compile: null,
                 Run: new CommandTemplate("dotnet", "fsi main.fsx"),
                 VersionCommand: new CommandTemplate("dotnet", "fsi --version"),
+                DocsUrl: "https://learn.microsoft.com/en-us/dotnet/fsharp/",
                 RunTimeout: TimeSpan.FromSeconds(30)),
 
             ["typescript"] = new LanguageDefinition(
@@ -59,7 +63,8 @@ public static class LanguageRegistry
                 SourceFileName: "main.ts",
                 Compile: null,
                 Run: new CommandTemplate("tsx", "main.ts"),
-                VersionCommand: new CommandTemplate("tsc", "--version")),
+                VersionCommand: new CommandTemplate("tsc", "--version"),
+                DocsUrl: "https://www.typescriptlang.org/docs/"),
         };
 
     public static LanguageDefinition? Find(string id) =>

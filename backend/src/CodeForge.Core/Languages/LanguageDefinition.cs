@@ -9,6 +9,7 @@ public sealed record LanguageDefinition(
     CommandTemplate? Compile,
     CommandTemplate Run,
     CommandTemplate VersionCommand,
+    string DocsUrl,
     IReadOnlyDictionary<string, string>? ExtraFiles = null,
     TimeSpan? CompileTimeout = null,
     TimeSpan? RunTimeout = null);

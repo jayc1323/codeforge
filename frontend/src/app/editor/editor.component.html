@@ -1,16 +1,19 @@
 <div class="shell">
   <header class="toolbar">
-    <span class="brand">CodeForge</span>
+    <a class="brand" routerLink="/">CodeForge</a>
     <select [(ngModel)]="selectedLanguage" (ngModelChange)="onLanguageChange()" [disabled]="running">
       <option *ngFor="let lang of languages" [value]="lang.id">
         {{ lang.displayName }} ({{ lang.version }})
       </option>
     </select>
+    <a class="docs-link" *ngIf="selectedDocsUrl" [href]="selectedDocsUrl" target="_blank" rel="noopener">
+      Docs
+    </a>
     <button class="run-btn" (click)="run()" [disabled]="running">
-      {{ running ? 'Running…' : '▶ Run' }}
+      {{ running ? 'Running…' : 'Run' }}
     </button>
     <button class="theme-btn" (click)="toggleTheme()" title="Toggle light/dark theme">
-      {{ isDarkTheme ? '☀ Light' : '🌙 Dark' }}
+      {{ isDarkTheme ? 'Light' : 'Dark' }}
     </button>
     <span class="error-banner" *ngIf="errorMessage">{{ errorMessage }}</span>
   </header>
@@ -44,4 +47,3 @@
     </aside>
   </main>
 </div>
-<router-outlet />

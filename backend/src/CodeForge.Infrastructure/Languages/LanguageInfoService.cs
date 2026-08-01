@@ -17,7 +17,7 @@ public sealed partial class LanguageInfoService(ILogger<LanguageInfoService> log
     {
         var results = await Task.WhenAll(LanguageRegistry.All.Select(async language =>
             new LanguageInfo(language.Id, language.DisplayName,
-                await DetectVersionAsync(language, cancellationToken))));
+                await DetectVersionAsync(language, cancellationToken), language.DocsUrl)));
 
         return results;
     }

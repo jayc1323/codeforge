@@ -33,4 +33,4 @@ public sealed record ExecutionResponse(
         record.CompletedAt);
 }
 
-public sealed record LanguageResponse(string Id, string DisplayName, string Version);
+public sealed record LanguageResponse(string Id, string DisplayName, string Version, string DocsUrl);
