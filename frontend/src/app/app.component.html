@@ -1,0 +1,47 @@
+<div class="shell">
+  <header class="toolbar">
+    <span class="brand">CodeForge</span>
+    <select [(ngModel)]="selectedLanguage" (ngModelChange)="onLanguageChange()" [disabled]="running">
+      <option *ngFor="let lang of languages" [value]="lang.id">
+        {{ lang.displayName }} ({{ lang.version }})
+      </option>
+    </select>
+    <button class="run-btn" (click)="run()" [disabled]="running">
+      {{ running ? 'Running…' : '▶ Run' }}
+    </button>
+    <button class="theme-btn" (click)="toggleTheme()" title="Toggle light/dark theme">
+      {{ isDarkTheme ? '☀ Light' : '🌙 Dark' }}
+    </button>
+    <span class="error-banner" *ngIf="errorMessage">{{ errorMessage }}</span>
+  </header>
+
+  <main class="workspace">
+    <section class="editor-pane" #editorContainer></section>
+
+    <aside class="side-pane">
+      <div class="panel">
+        <h3>Standard input</h3>
+        <textarea [(ngModel)]="standardInput" [disabled]="running"
+                  placeholder="Input piped to your program on stdin…" spellcheck="false"></textarea>
+      </div>
+
+      <div class="panel output-panel" *ngIf="execution">
+        <h3>
+          Output
+          <span class="status-chip" [attr.data-status]="execution.status">
+            {{ statusLabels[execution.status] }}
+          </span>
+          <span class="duration" *ngIf="execution.durationMs !== null">
+            {{ execution.durationMs | number:'1.0-0' }} ms
+          </span>
+        </h3>
+        <pre class="stdout" *ngIf="execution.stdout">{{ execution.stdout }}</pre>
+        <pre class="stderr" *ngIf="execution.stderr">{{ execution.stderr }}</pre>
+        <p class="muted" *ngIf="!execution.stdout && !execution.stderr && execution.status > 1">
+          (no output)
+        </p>
+      </div>
+    </aside>
+  </main>
+</div>
+<router-outlet />
