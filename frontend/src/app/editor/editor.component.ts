@@ -2,9 +2,11 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@an
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Execution, ExecutionService, Language, STATUS_LABELS } from '../services/execution.service';
+import { Execution, ExecutionHistoryItem, ExecutionService, Language, STATUS_LABELS } from '../services/execution.service';
 import { ExecutionStreamService } from '../services/execution-stream.service';
 import { MonacoLoaderService } from '../services/monaco-loader.service';
+import { AuthService } from '../services/auth.service';
+import { SnippetService, SnippetSummary } from '../services/snippet.service';
 import { LspClient } from '../services/lsp/lsp-client';
 import { attachLsp } from '../services/lsp/monaco-lsp';
 
@@ -42,6 +44,8 @@ export class EditorComponent implements OnInit, OnDestroy {
   private executionService = inject(ExecutionService);
   private streamService = inject(ExecutionStreamService);
   private monacoLoader = inject(MonacoLoaderService);
+  protected readonly auth = inject(AuthService);
+  private snippetService = inject(SnippetService);
   private editor: any;
   private monaco: any;
   private pollTimer: any;
@@ -55,6 +59,13 @@ export class EditorComponent implements OnInit, OnDestroy {
   errorMessage = '';
   isDarkTheme = localStorage.getItem(THEME_STORAGE_KEY) !== 'light';
 
+  snippets: SnippetSummary[] = [];
+  history: ExecutionHistoryItem[] = [];
+  sideTab: 'io' | 'snippets' | 'history' = 'io';
+  snippetTitle = '';
+  savingSnippet = false;
+  snippetMessage = '';
+
   readonly statusLabels = STATUS_LABELS;
 
   get selectedDocsUrl(): string | null {
@@ -65,6 +76,11 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.executionService.getLanguages().subscribe({
       next: (languages) => (this.languages = languages),
       error: () => (this.errorMessage = 'Could not reach the CodeForge API.')
+    });
+
+    this.auth.user$.subscribe((email) => {
+      if (email) this.loadUserData();
+      else { this.snippets = []; this.history = []; }
     });
 
     this.monaco = await this.monacoLoader.load();
@@ -125,6 +141,99 @@ export class EditorComponent implements OnInit, OnDestroy {
     await this.startLspIfSupported();
   }
 
+  logout(): void {
+    this.auth.logout();
+  }
+
+  saveSnippet(): void {
+    if (this.savingSnippet || !this.snippetTitle.trim()) return;
+    this.savingSnippet = true;
+    this.snippetMessage = '';
+
+    this.snippetService.save({
+      title: this.snippetTitle.trim(),
+      language: this.selectedLanguage,
+      sourceCode: this.editor.getValue(),
+      standardInput: this.standardInput || undefined
+    }).subscribe({
+      next: () => {
+        this.savingSnippet = false;
+        this.snippetMessage = 'Saved.';
+        this.snippetTitle = '';
+        this.loadSnippets();
+      },
+      error: () => {
+        this.savingSnippet = false;
+        this.snippetMessage = 'Could not save the snippet.';
+      }
+    });
+  }
+
+  loadSnippet(id: string): void {
+    this.snippetService.get(id).subscribe({
+      next: async (snippet) => {
+        this.selectedLanguage = snippet.language;
+        this.standardInput = snippet.standardInput ?? '';
+        const model = this.editor?.getModel();
+        if (model) {
+          this.monaco.editor.setModelLanguage(model, MONACO_LANGUAGE[snippet.language] ?? 'plaintext');
+          model.setValue(snippet.sourceCode);
+        }
+        await this.startLspIfSupported();
+        this.sideTab = 'io';
+      },
+      error: () => (this.snippetMessage = 'Could not load the snippet.')
+    });
+  }
+
+  deleteSnippet(id: string): void {
+    this.snippetService.delete(id).subscribe({
+      next: () => this.loadSnippets(),
+      error: () => (this.snippetMessage = 'Could not delete the snippet.')
+    });
+  }
+
+  restoreHistory(id: string): void {
+    this.executionService.getExecution(id).subscribe({
+      next: async (execution) => {
+        this.selectedLanguage = execution.language;
+        this.standardInput = execution.standardInput ?? '';
+        const model = this.editor?.getModel();
+        if (model) {
+          this.monaco.editor.setModelLanguage(model, MONACO_LANGUAGE[execution.language] ?? 'plaintext');
+          model.setValue(execution.sourceCode ?? '');
+        }
+        this.execution = execution;
+        await this.startLspIfSupported();
+        this.sideTab = 'io';
+      },
+      error: () => (this.errorMessage = 'Could not load that execution.')
+    });
+  }
+
+  private loadUserData(): void {
+    this.loadSnippets();
+    this.executionService.getHistory().subscribe({
+      next: (history) => (this.history = history),
+      error: () => {}
+    });
+  }
+
+  private loadSnippets(): void {
+    this.snippetService.list().subscribe({
+      next: (snippets) => (this.snippets = snippets),
+      error: () => {}
+    });
+  }
+
+  private refreshHistoryIfLoggedIn(): void {
+    if (!this.auth.isLoggedIn) return;
+    this.executionService.getHistory().subscribe({
+      next: (history) => (this.history = history),
+      error: () => {}
+    });
+  }
+
   run(): void {
     if (this.running) return;
     this.running = true;
@@ -149,6 +258,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     // Live view that grows as stdout/stderr chunks arrive over SignalR.
     this.execution = {
       id, language: this.selectedLanguage, status: 1,
+      sourceCode: null, standardInput: null,
       stdout: '', stderr: '', exitCode: null, durationMs: null,
       createdAt: new Date().toISOString(), completedAt: null
     };
@@ -169,6 +279,7 @@ export class EditorComponent implements OnInit, OnDestroy {
           this.execution.durationMs = result.durationMs;
         }
         this.running = false;
+        this.refreshHistoryIfLoggedIn();
       },
       onError: () => {}
     }).catch(() => {
@@ -187,6 +298,7 @@ export class EditorComponent implements OnInit, OnDestroy {
           if (execution.status !== 0 && execution.status !== 1) {
             clearInterval(this.pollTimer);
             this.running = false;
+            this.refreshHistoryIfLoggedIn();
           }
         },
         error: () => {

@@ -15,6 +15,15 @@
     <button class="theme-btn" (click)="toggleTheme()" title="Toggle light/dark theme">
       {{ isDarkTheme ? 'Light' : 'Dark' }}
     </button>
+
+    <div class="user-area" *ngIf="auth.user$ | async as email; else guestArea">
+      <span class="user-email" [title]="email">{{ email }}</span>
+      <button class="link-btn" (click)="logout()">Log out</button>
+    </div>
+    <ng-template #guestArea>
+      <a class="link-btn" routerLink="/auth">Login to save</a>
+    </ng-template>
+
     <span class="error-banner" *ngIf="errorMessage">{{ errorMessage }}</span>
   </header>
 
@@ -22,6 +31,24 @@
     <section class="editor-pane" #editorContainer></section>
 
     <aside class="side-pane">
+      <div class="side-tabs" *ngIf="auth.user$ | async">
+        <button [class.active]="sideTab === 'io'" (click)="sideTab = 'io'">Run</button>
+        <button [class.active]="sideTab === 'snippets'" (click)="sideTab = 'snippets'">Snippets</button>
+        <button [class.active]="sideTab === 'history'" (click)="sideTab = 'history'">History</button>
+      </div>
+
+      <ng-container *ngIf="sideTab === 'io' || !(auth.user$ | async)">
+      <div class="panel" *ngIf="auth.user$ | async">
+        <h3>Save snippet</h3>
+        <div class="save-row">
+          <input type="text" [(ngModel)]="snippetTitle" placeholder="Snippet title…" maxlength="200" />
+          <button class="mini-btn" (click)="saveSnippet()" [disabled]="savingSnippet || !snippetTitle.trim()">
+            {{ savingSnippet ? 'Saving…' : 'Save' }}
+          </button>
+        </div>
+        <p class="muted" *ngIf="snippetMessage">{{ snippetMessage }}</p>
+      </div>
+
       <div class="panel">
         <h3>Standard input</h3>
         <textarea [(ngModel)]="standardInput" [disabled]="running"
@@ -43,6 +70,38 @@
         <p class="muted" *ngIf="!execution.stdout && !execution.stderr && execution.status > 1">
           (no output)
         </p>
+      </div>
+      </ng-container>
+
+      <div class="panel" *ngIf="sideTab === 'snippets' && (auth.user$ | async)">
+        <h3>Your snippets</h3>
+        <p class="muted" *ngIf="snippets.length === 0">No snippets saved yet.</p>
+        <ul class="item-list">
+          <li *ngFor="let snippet of snippets">
+            <button class="item-main" (click)="loadSnippet(snippet.id)">
+              <span class="item-title">{{ snippet.title }}</span>
+              <span class="item-meta">{{ snippet.language }} · {{ snippet.updatedAt | date:'MMM d, HH:mm' }}</span>
+            </button>
+            <button class="item-delete" (click)="deleteSnippet(snippet.id)" title="Delete snippet">×</button>
+          </li>
+        </ul>
+      </div>
+
+      <div class="panel" *ngIf="sideTab === 'history' && (auth.user$ | async)">
+        <h3>Execution history</h3>
+        <p class="muted" *ngIf="history.length === 0">No executions yet.</p>
+        <ul class="item-list">
+          <li *ngFor="let item of history">
+            <button class="item-main" (click)="restoreHistory(item.id)">
+              <span class="item-title">{{ item.sourcePreview }}</span>
+              <span class="item-meta">
+                {{ item.language }} · {{ statusLabels[item.status] }}
+                <span *ngIf="item.durationMs !== null"> · {{ item.durationMs | number:'1.0-0' }} ms</span>
+                · {{ item.createdAt | date:'MMM d, HH:mm' }}
+              </span>
+            </button>
+          </li>
+        </ul>
       </div>
     </aside>
   </main>

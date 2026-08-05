@@ -28,12 +28,25 @@ export interface Execution {
   id: string;
   language: string;
   status: number;
+  sourceCode: string | null;
+  standardInput: string | null;
   stdout: string | null;
   stderr: string | null;
   exitCode: number | null;
   durationMs: number | null;
   createdAt: string;
   completedAt: string | null;
+}
+
+export interface ExecutionHistoryItem {
+  id: string;
+  language: string;
+  status: number;
+  exitCode: number | null;
+  durationMs: number | null;
+  createdAt: string;
+  completedAt: string | null;
+  sourcePreview: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -50,5 +63,9 @@ export class ExecutionService {
 
   getExecution(id: string): Observable<Execution> {
     return this.http.get<Execution>(`/api/executions/${id}`);
+  }
+
+  getHistory(take = 50): Observable<ExecutionHistoryItem[]> {
+    return this.http.get<ExecutionHistoryItem[]>(`/api/executions/mine?take=${take}`);
   }
 }

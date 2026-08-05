@@ -160,6 +160,211 @@ pre {
   cursor: pointer;
 }
 
+/* ---- User area ---- */
+.user-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.user-email {
+  font-size: 13px;
+  color: #888;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-btn {
+  background: none;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #9cdcfe;
+  font-size: 13px;
+  padding: 5px 10px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.link-btn:hover {
+  background: #3c3c3c;
+}
+
+:host(.light) .user-email {
+  color: #666;
+}
+
+:host(.light) .link-btn {
+  color: #006ab1;
+  border-color: #bbb;
+}
+
+:host(.light) .link-btn:hover {
+  background: #ececec;
+}
+
+/* ---- Side tabs ---- */
+.side-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.side-tabs button {
+  flex: 1;
+  background: #2d2d2d;
+  color: #888;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 6px 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.side-tabs button.active {
+  background: #3c3c3c;
+  color: #d4d4d4;
+  border-color: #555;
+}
+
+:host(.light) .side-tabs button {
+  background: #ececec;
+  color: #666;
+  border-color: #ddd;
+}
+
+:host(.light) .side-tabs button.active {
+  background: #ffffff;
+  color: #333;
+  border-color: #bbb;
+}
+
+/* ---- Save snippet ---- */
+.save-row {
+  display: flex;
+  gap: 8px;
+}
+
+.save-row input {
+  flex: 1;
+  background: #3c3c3c;
+  color: #d4d4d4;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 6px 8px;
+  min-width: 0;
+}
+
+:host(.light) .save-row input {
+  background: #ffffff;
+  color: #333;
+  border-color: #bbb;
+}
+
+.mini-btn {
+  background: #0e639c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mini-btn:disabled {
+  background: #555;
+  cursor: default;
+}
+
+/* ---- Snippet/history lists ---- */
+.item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item-list li {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.item-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  background: #2d2d2d;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.item-main:hover {
+  border-color: #555;
+  background: #353535;
+}
+
+.item-title {
+  color: #d4d4d4;
+  font-size: 13px;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-meta {
+  color: #888;
+  font-size: 11.5px;
+}
+
+.item-delete {
+  background: none;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #888;
+  cursor: pointer;
+  padding: 0 10px;
+  font-size: 16px;
+}
+
+.item-delete:hover {
+  color: #f48771;
+  border-color: #f48771;
+}
+
+:host(.light) .item-main {
+  background: #f6f8fa;
+  border-color: #ddd;
+}
+
+:host(.light) .item-main:hover {
+  background: #ececec;
+  border-color: #bbb;
+}
+
+:host(.light) .item-title {
+  color: #333;
+}
+
+:host(.light) .item-delete {
+  border-color: #ddd;
+  color: #666;
+}
+
+:host(.light) .item-delete:hover {
+  color: #c5272f;
+  border-color: #c5272f;
+}
+
 /* ---- Light theme ---- */
 :host(.light) .shell {
   background: #ffffff;

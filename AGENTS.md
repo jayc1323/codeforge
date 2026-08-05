@@ -14,7 +14,7 @@ export PATH=/usr/local/dotnet:$PATH   # dotnet is NOT on PATH by default
 systemctl start codeforge-api codeforge-ui
 journalctl -u codeforge-api -f        # logs
 ```
-API binds localhost:5045 (only the Angular proxy reaches it); UI binds 0.0.0.0:80 via codeforge-ui.service (moved from 4200 because user networks often block non-standard ports). run.sh still uses 4200 for local-style dev.
+API binds localhost:5045 (only the Angular proxy reaches it); UI binds 0.0.0.0:80 via codeforge-ui.service (moved from 4200 because user networks often block non-standard ports). run.sh also uses port 80 now.
 
 ## Test
 ```bash
@@ -33,7 +33,7 @@ cd backend && dotnet test
 - Store is in-memory; swap for a real DB later.
 - Known cosmetic issue: F# in offline container prints "An issue was encountered verifying workloads" to stdout before program output.
 
-## Progress (as of 2026-08-01)
+## Progress (as of 2026-08-05)
 DONE:
 - [x] .NET 8 backend: Api / Core / Infrastructure layers, xUnit tests (21 passing)
 - [x] SignalR live streaming: output chunks pushed as produced (verified ~1s apart over ws through the proxy), polling kept as fallback
@@ -43,20 +43,24 @@ DONE:
 - [x] Angular 17 frontend: Monaco editor, per-language samples, stdin box, status chips, stdout/stderr panels, /api proxy, light/dark theme toggle (localStorage)
 - [x] End-to-end verified through the Angular proxy (4200 -> 5045) with Docker runner active
 - [x] Python LSP (Pyright) IntelliSense: backend LspBridge maps /lsp/{language} WebSocket -> pyright-langserver stdio (one server process per browser session, killed on disconnect); frontend LspClient + monaco-lsp wiring (completion, hover, diagnostics markers); lazily started when Python is selected. Verified initialize handshake through the proxy.
+- [x] Persistence: Azure SQL Database via EF Core 8 + Microsoft.EntityFrameworkCore.SqlServer. CodeForgeDbContext (IdentityDbContext<ApplicationUser>) with Executions + Snippets tables; DesignTimeDbContextFactory reads ConnectionStrings__CodeForge env var or .secrets/dbconnectionstring.txt for dotnet-ef. EfExecutionStore (IDbContextFactory-based, safe for the singleton ExecutionWorker) replaces InMemoryExecutionStore when a connection string is configured; worker persists Running + final states. Secrets in /root/codeforge/.secrets/env (gitignored, chmod 600), loaded by codeforge-api.service via EnvironmentFile. NOTE: DB is Azure SQL serverless — first connection after idle wakes it up and can fail with error 40613; just retry.
+- [x] Auth: ASP.NET Core Identity (email+password, min 8 chars) + JWT bearer (HMAC-SHA256, 7-day expiry, Jwt:SigningKey in .secrets/env). POST /api/auth/register + /api/auth/login -> {token, email, expiresAt}. SnippetsController fully [Authorize]; executions allow guests but record UserId when a token is present. GET /api/executions/mine = per-user history (paginated, latest first).
+- [x] Frontend auth: /auth route (login/register card, same visual style as home), AuthService (token in localStorage, user$ BehaviorSubject), authInterceptor attaches Bearer to /api requests. Editor toolbar shows user email + logout when logged in, "Login to save" link when guest. Side pane gets Run/Snippets/History tabs when logged in: save current editor content as a titled snippet, load/delete snippets, browse + restore past executions (sourceCode + stdin restored into the editor). ExecutionResponse now includes sourceCode/standardInput to support restore. Home page: "Start coding" (guest) + "Login" buttons.
 
 ## Next steps (priority order)
 0. Full IntelliSense for other languages: add clangd (C/C++), csharp-ls, fsautocomplete to LspBridge.Servers + frontend languageId mapping. Same LspClient/monaco-lsp wiring — just register per language.
 0.5. Warm container pool: `docker exec` into pre-warmed containers (~0.19s vs ~0.9s spin-up); needs between-run hygiene (wipe /work+/tmp, kill stray PIDs) and pool lifecycle management
-1. Persistence: replace InMemoryExecutionStore with PostgreSQL + EF Core (execution history, saved snippets)
-2. Production deploy: domain + Caddy (auto TLS) on this droplet, serve `ng build` static files, proxy /api+/hubs (ws) to API. NOT DO App Platform — it has no Docker socket, execution engine can't run there. Add auth/rate-limit before public exposure.
-3. Auth: ASP.NET Core Identity + JWT; save/share snippets per user
+1. ~~Persistence~~ DONE (Azure SQL + EF Core + Identity, see above)
+2. Production deploy: domain + Caddy (auto TLS) on this droplet, serve `ng build` static files, proxy /api+/hubs (ws) to API. NOT DO App Platform — it has no Docker socket, execution engine can't run there. Add rate-limit before public exposure (auth is done).
+3. Shareable snippet links: public URL /s/{id} for snippets (needs an IsPublic flag + unauthenticated GET endpoint)
 4. AI add-on: endpoint that sends failed executions (source + stderr) to an LLM for error explanations (the agentic feature)
 5. Add Haskell to LanguageRegistry (requires ghc install)
 
 ## Environment
 - DigitalOcean droplet, 2 vCPU / 4GB RAM, 2GB swap at /swapfile
-- .NET SDK 8.0 at /usr/local/dotnet; node 22; tsx + tsc installed globally (npm); python3; g++ 13; Docker 29 installed; NO ghc
+- .NET SDK 8.0 at /usr/local/dotnet; dotnet-ef at /root/.dotnet/tools (needs DOTNET_ROOT=/usr/local/dotnet); node 22; tsx + tsc installed globally (npm); python3; g++ 13; Docker 29 installed; NO ghc
 - Docker images: python:3.12-slim, gcc:13, mcr.microsoft.com/dotnet/sdk:8.0, codeforge-typescript (local build, docker/typescript/Dockerfile)
+- DB: Azure SQL Database (serverless) at jaychoudharydb.database.windows.net, database CodeForgeDB. Droplet IP is firewall-allowlisted. EF Core migrations applied via dotnet-ef.
 - Devin CLI permissions: global blanket allow (exec/edit/Write/**/Fetch) in ~/.config/devin/config.json
 
 ## Candidate languages to add (assessed)

@@ -2,6 +2,9 @@ using CodeForge.Core.Execution;
 using CodeForge.Core.Languages;
 using CodeForge.Infrastructure.Execution;
 using CodeForge.Infrastructure.Languages;
+using CodeForge.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,8 +19,29 @@ public static class DependencyInjection
             configuration.GetSection(DockerRunnerOptions.SectionName));
 
         services.AddSingleton<IExecutionQueue, ExecutionQueue>();
-        services.AddSingleton<IExecutionStore, InMemoryExecutionStore>();
         services.AddSingleton<ILanguageInfoService, LanguageInfoService>();
+
+        var connectionString = configuration.GetConnectionString("CodeForge");
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            services.AddDbContextFactory<CodeForgeDbContext>(options =>
+                options.UseSqlServer(connectionString));
+            services.AddSingleton<IExecutionStore, EfExecutionStore>();
+
+            services.AddIdentityCore<ApplicationUser>(options =>
+                {
+                    options.Password.RequireDigit = false;
+                    options.Password.RequireUppercase = false;
+                    options.Password.RequireNonAlphanumeric = false;
+                    options.Password.RequiredLength = 8;
+                })
+                .AddRoles<IdentityRole>()
+                .AddEntityFrameworkStores<CodeForgeDbContext>();
+        }
+        else
+        {
+            services.AddSingleton<IExecutionStore, InMemoryExecutionStore>();
+        }
 
         if (string.Equals(configuration["Execution:Runner"], "docker", StringComparison.OrdinalIgnoreCase))
             services.AddSingleton<IExecutionRunner, DockerRunner>();

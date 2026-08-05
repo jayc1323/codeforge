@@ -5,7 +5,7 @@
 
   <nav class="nav">
     <span class="logo">CodeForge</span>
-    <a class="nav-cta" routerLink="/app">Login</a>
+    <a class="nav-cta" routerLink="/auth">Login</a>
   </nav>
 
   <main class="hero">
@@ -21,8 +21,11 @@
     </div>
 
     <div class="actions">
-      <a class="cta" routerLink="/app">Login</a>
-      <span class="hint">no account needed yet — this button leads straight into the app</span>
+      <div class="action-row">
+        <a class="cta" routerLink="/app">Start coding</a>
+        <a class="cta secondary" routerLink="/auth">Login</a>
+      </div>
+      <span class="hint">no account needed — login only if you want to save snippets and history</span>
     </div>
   </main>
 

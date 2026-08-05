@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts the CodeForge API (port 5045) and Angular dev server (port 4200).
+# Starts the CodeForge API (port 5045) and Angular dev server (port 80).
 # Ctrl+C stops both. Usage: ./run.sh
 set -uo pipefail
 
@@ -14,7 +14,7 @@ echo "Starting CodeForge API..."
 API_PID=$!
 
 echo "Starting Angular dev server..."
-(cd "$ROOT/frontend" && npx ng serve --host 0.0.0.0 --port 4200 > "$UI_LOG" 2>&1) &
+(cd "$ROOT/frontend" && npx ng serve --host 0.0.0.0 --port 80 > "$UI_LOG" 2>&1) &
 UI_PID=$!
 
 cleanup() {
@@ -30,8 +30,8 @@ cleanup() {
 trap cleanup INT TERM
 
 echo ""
-echo "  API: http://localhost:5045  (log: $API_LOG)"
-echo "  UI:  http://localhost:4200  (log: $UI_LOG)"
+echo "  API: http://159.203.182.167:5045  (log: $API_LOG)"
+echo "  UI:  http://159.203.182.167:80  (log: $UI_LOG)"
 echo ""
 echo "Press Ctrl+C to stop both."
 

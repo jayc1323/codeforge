@@ -8,6 +8,7 @@ public sealed class ExecutionWorker(
     IExecutionQueue queue,
     IExecutionRunner runner,
     IExecutionEventPublisher publisher,
+    IExecutionStore store,
     ILogger<ExecutionWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -25,6 +26,7 @@ public sealed class ExecutionWorker(
             }
 
             record.Status = ExecutionStatus.Running;
+            await SafePersistAsync(() => store.UpdateAsync(record, stoppingToken), record.Id);
             await SafePublishAsync(() => publisher.PublishStatusAsync(record.Id, ExecutionStatus.Running), record.Id);
 
             try
@@ -54,7 +56,20 @@ public sealed class ExecutionWorker(
             finally
             {
                 record.CompletedAt = DateTimeOffset.UtcNow;
+                await SafePersistAsync(() => store.UpdateAsync(record, CancellationToken.None), record.Id);
             }
+        }
+    }
+
+    private async Task SafePersistAsync(Func<Task> persist, Guid executionId)
+    {
+        try
+        {
+            await persist();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to persist state for execution {ExecutionId}", executionId);
         }
     }
 

@@ -1,0 +1,42 @@
+<div class="page">
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+  <div class="grid-overlay"></div>
+
+  <nav class="nav">
+    <a class="logo" routerLink="/">CodeForge</a>
+    <a class="nav-cta" routerLink="/app">Continue as guest</a>
+  </nav>
+
+  <main class="card-wrap">
+    <form class="card" (ngSubmit)="submit()">
+      <h1>{{ mode === 'login' ? 'Sign in' : 'Create account' }}</h1>
+      <p class="muted">
+        {{ mode === 'login'
+          ? 'Sign in to save snippets and keep your execution history.'
+          : 'Accounts are free and unlock snippet saving + history.' }}
+      </p>
+
+      <label>
+        Email
+        <input type="email" name="email" [(ngModel)]="email" autocomplete="email" required />
+      </label>
+
+      <label>
+        Password
+        <input type="password" name="password" [(ngModel)]="password"
+               [autocomplete]="mode === 'login' ? 'current-password' : 'new-password'" required />
+      </label>
+
+      <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+      <button class="cta" type="submit" [disabled]="busy">
+        {{ busy ? 'Please wait…' : (mode === 'login' ? 'Sign in' : 'Register') }}
+      </button>
+
+      <button class="link" type="button" (click)="switchMode()">
+        {{ mode === 'login' ? 'Need an account? Register' : 'Have an account? Sign in' }}
+      </button>
+    </form>
+  </main>
+</div>

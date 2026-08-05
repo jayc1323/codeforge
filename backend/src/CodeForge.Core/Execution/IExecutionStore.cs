@@ -2,6 +2,7 @@ namespace CodeForge.Core.Execution;
 
 public interface IExecutionStore
 {
-    void Add(ExecutionRecord record);
-    ExecutionRecord? Get(Guid id);
+    Task AddAsync(ExecutionRecord record, CancellationToken cancellationToken = default);
+    Task<ExecutionRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default);
+    Task UpdateAsync(ExecutionRecord record, CancellationToken cancellationToken = default);
 }
