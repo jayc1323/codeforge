@@ -9,7 +9,8 @@ Online multi-language code execution platform.
 ## Run (dev)
 ```bash
 export PATH=/usr/local/dotnet:$PATH   # dotnet is NOT on PATH by default
-/root/codeforge/run.sh                # starts both (API 5045, UI 4200); Ctrl+C stops both
+/root/codeforge/run.sh                # starts both (API 5045, UI 80); Ctrl+C stops both
+/root/codeforge/stop.sh               # stops services + stray dev processes + pyright + leftover containers
 # OR as always-on services (survive reboots, auto-restart):
 systemctl start codeforge-api codeforge-ui
 journalctl -u codeforge-api -f        # logs
