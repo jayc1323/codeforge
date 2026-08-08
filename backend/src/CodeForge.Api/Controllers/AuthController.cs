@@ -2,11 +2,13 @@ using CodeForge.Api.Auth;
 using CodeForge.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace CodeForge.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[EnableRateLimiting("auth")]
 public class AuthController(UserManager<ApplicationUser> userManager, JwtTokenService tokenService) : ControllerBase
 {
     public sealed record RegisterRequest(string Email, string Password);

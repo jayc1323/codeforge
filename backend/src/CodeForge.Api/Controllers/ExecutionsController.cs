@@ -5,6 +5,7 @@ using CodeForge.Core.Languages;
 using CodeForge.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace CodeForge.Api.Controllers;
@@ -14,6 +15,7 @@ namespace CodeForge.Api.Controllers;
 public class ExecutionsController(IExecutionQueue queue, IExecutionStore store) : ControllerBase
 {
     [HttpPost]
+    [EnableRateLimiting("executions")]
     [ProducesResponseType<SubmitExecutionResponse>(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Submit(SubmitExecutionRequest request, CancellationToken cancellationToken)
