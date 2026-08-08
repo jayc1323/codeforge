@@ -1,18 +1,30 @@
 # CodeForge production config.
 # Caddy automatically provisions and renews the Let's Encrypt cert for this
 # domain (HTTP-01 challenge over port 80) — no certbot needed.
-jaychoudhary.duckdns.org {
-	root * /root/codeforge/frontend/dist/codeforge-ui/browser
+coderunner.duckdns.org {
+	root * /var/www/codeforge
 
 	# API, SignalR hub, and LSP bridge -> Kestrel.
 	# reverse_proxy handles WebSocket upgrades automatically.
-	reverse_proxy /api/* localhost:5045
-	reverse_proxy /hubs/* localhost:5045
-	reverse_proxy /lsp/* localhost:5045
+	# handle blocks are mutually exclusive and ordered: /api, /hubs and /lsp
+	# never fall through to the SPA fallback below.
+	handle /api/* {
+		reverse_proxy localhost:5045
+	}
+
+	handle /hubs/* {
+		reverse_proxy localhost:5045
+	}
+
+	handle /lsp/* {
+		reverse_proxy localhost:5045
+	}
 
 	# Angular SPA: serve real files, fall back to index.html for client routes.
-	try_files {path} /index.html
-	file_server
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
 
 	encode zstd gzip
 }

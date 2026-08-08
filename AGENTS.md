@@ -17,6 +17,14 @@ journalctl -u codeforge-api -f        # logs
 ```
 API binds localhost:5045 (only the Angular proxy reaches it); UI binds 0.0.0.0:80 via codeforge-ui.service (moved from 4200 because user networks often block non-standard ports). run.sh also uses port 80 now.
 
+## Production deploy (LIVE)
+- **URL: https://coderunner.duckdns.org** (DuckDNS -> droplet IP 159.203.182.167)
+- Caddy (systemd, enabled) serves https on 80/443: static Angular build from /var/www/codeforge (owned by caddy user — /root is unreadable by caddy, that's why it's not served from the repo), reverse-proxies /api, /hubs, /lsp to Kestrel :5045. Auto Let's Encrypt TLS, self-renewing. Config: deploy/Caddyfile (copied to /etc/caddy/Caddyfile; `systemctl reload caddy` after changes). handle blocks are ordered — /api, /hubs, /lsp never hit the SPA fallback.
+- Deploy frontend updates: ./deploy/deploy-frontend.sh (ng build -> /var/www/codeforge). codeforge-ui.service is DISABLED in prod (dev server only; run.sh still works).
+- Rate limiting: 10 executions/min per IP, 10 auth attempts/5min per IP (.NET 8 built-in, partitioned by X-Forwarded-For from Caddy). Verified: 8x202 then 429s.
+- Firewall: ufw active, allow 22/80/443 only, deny everything else inbound.
+- E2E verified over public HTTPS: register -> JWT -> authed Docker execution -> history; SignalR negotiate 200; SPA fallback serves index.html for /app, /auth.
+
 ## Test
 ```bash
 cd backend && dotnet test

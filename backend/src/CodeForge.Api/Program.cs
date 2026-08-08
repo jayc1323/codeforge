@@ -75,7 +75,7 @@ if (!string.IsNullOrWhiteSpace(jwtSigningKey))
 
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:4200", "https://jaychoudhary.duckdns.org")
+        policy.WithOrigins("http://localhost:4200", "https://coderunner.duckdns.org")
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
