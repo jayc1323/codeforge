@@ -17,8 +17,14 @@ journalctl -u codeforge-api -f        # logs
 ```
 API binds localhost:5045 (only the Angular proxy reaches it); UI binds 0.0.0.0:80 via codeforge-ui.service (moved from 4200 because user networks often block non-standard ports). run.sh also uses port 80 now.
 
-## Production deploy (LIVE)
-- **URL: https://coderunner.duckdns.org** (DuckDNS -> droplet IP 159.203.182.167)
+## Production deploy (MIGRATING to Azure VM)
+- **Droplet is RETIRED: all services stopped+disabled (2026-08-19). Droplet itself will be destroyed once Azure is verified.**
+- New home: Azure F-series VM (2 vCPU / 8GB). Bootstrap with `deploy/azure-setup.sh` (installs .NET 8, Docker, Node 22, pyright, Caddy; clones repo; builds images; runs both deploy scripts; installs Caddyfile).
+- Migration checklist: 1) NSG inbound 22/80/443  2) Azure SQL firewall: add the new VM's public IP  3) create `.secrets/env` on the new VM (DB conn string + fresh JWT key — user has the DB string)  4) run azure-setup.sh  5) point coderunner.duckdns.org at the new VM IP  6) verify E2E over HTTPS  7) THEN destroy the DO droplet.
+- Old droplet details (for reference): was 159.203.182.167, 2 vCPU / 4GB.
+
+### Deployment reference (unchanged by migration)
+- **URL: https://coderunner.duckdns.org** (DuckDNS -> whichever host is live)
 - Caddy (systemd, enabled) serves https on 80/443: static Angular build from /var/www/codeforge (owned by caddy user — /root is unreadable by caddy, that's why it's not served from the repo), reverse-proxies /api, /hubs, /lsp to Kestrel :5045. Auto Let's Encrypt TLS, self-renewing. Config: deploy/Caddyfile (copied to /etc/caddy/Caddyfile; `systemctl reload caddy` after changes). handle blocks are ordered — /api, /hubs, /lsp never hit the SPA fallback.
 - Deploy frontend updates: ./deploy/deploy-frontend.sh (ng build -> /var/www/codeforge). codeforge-ui.service is DISABLED in prod (dev server only; run.sh still works).
 - Deploy backend updates: ./deploy/deploy-backend.sh (dotnet publish Release -> /opt/codeforge-api, installs deploy/codeforge-api.service, restarts, health-checks :5045 for 30s, rolls back on failure). Runs the PUBLISHED BINARY (not dotnet run): boots in ~2s, no build-on-boot. Unit sets ASPNETCORE_URLS=http://localhost:5045 (launchSettings.json only applies to dotnet run) and ASPNETCORE_ENVIRONMENT=Production (no Swagger in prod).
