@@ -32,6 +32,37 @@ API binds localhost:5045 (only the Angular proxy reaches it); UI binds 0.0.0.0:8
 - Firewall: ufw active, allow 22/80/443 only, deny everything else inbound.
 - E2E verified over public HTTPS: register -> JWT -> authed Docker execution -> history; SignalR negotiate 200; SPA fallback serves index.html for /app, /auth.
 
+## Debugging (read this first when something breaks)
+
+Start here — every failure mode below was hit and fixed in production:
+
+### Where to look
+```bash
+journalctl -u codeforge-api -n 50 --no-pager   # backend logs (EF SQL, exceptions, startup)
+journalctl -u caddy -n 50 --no-pager           # TLS issuance, proxy errors
+systemctl status codeforge-api caddy           # service state + recent log lines
+docker ps -a                                   # leftover containers (should be none; codeforge-* are per-run)
+```
+
+### Failure modes we've actually hit (symptom -> cause -> fix)
+1. **`status=203/EXEC` on codeforge-api** — ExecStart path in the unit doesn't exist. dotnet lives at `/usr/local/dotnet/dotnet` on the droplet (manual install) but `/usr/bin/dotnet` on Azure (apt install). deploy-backend.sh now resolves it via `command -v dotnet` and substitutes `__DOTNET__` in the unit. If you see this: `command -v dotnet`, then re-run deploy-backend.sh.
+2. **`ng: not found` during frontend deploy** — fresh clone has no `node_modules` (gitignored). deploy-frontend.sh now runs `npm ci` when missing. First `npm ci` takes several minutes (~300MB).
+3. **Empty response / 500 on FIRST API call after idle** — Azure SQL serverless auto-pauses; first connection fails with error 40613 ("database not currently available"). Just retry — it wakes up in ~30-60s and stays warm.
+4. **HTTP 200 but empty/HTML body from /api POSTs** — Caddy routing bug: `try_files` before `reverse_proxy` rewrites /api/* to index.html. Fixed with ordered `handle` blocks. If API calls return the SPA HTML, check the Caddyfile uses `handle /api/*` etc., not bare path matchers.
+5. **403 from Caddy on the frontend** — Caddy runs as the `caddy` user and can't read `/root` (perms 700). That's why the web root is `/var/www/codeforge` owned by `caddy:caddy`. If you move files, keep them caddy-readable.
+6. **HTTPS fails / cert errors after migration** — Caddy can only get the Let's Encrypt cert once DNS points at THIS host. Check `dig +short coderunner.duckdns.org` returns the current VM's IP. Caddy retries automatically; watch `journalctl -u caddy -f`.
+7. **DB connection refused/timeout** — Azure SQL firewall doesn't have this host's public IP. Portal -> SQL server -> Networking -> add the VM's public IP. NSG (Azure) AND ufw (VM) both must allow 80/443 — two separate firewalls.
+
+### Quick E2E smoke test (run after any deploy/migration)
+```bash
+curl -s https://coderunner.duckdns.org/api/languages          # JSON list = API+proxy OK
+curl -s -o /dev/null -w "%{http_code}\n" https://coderunner.duckdns.org   # 200 = frontend OK
+curl -s -X POST https://coderunner.duckdns.org/api/executions \
+  -H "Content-Type: application/json" \
+  -d '{"language":"python","sourceCode":"print(1)"}'          # 202 + id = execution pipeline OK
+# then GET /api/executions/{id} after ~6s -> status 2, stdout "1\n"
+```
+
 ## Test
 ```bash
 cd backend && dotnet test
