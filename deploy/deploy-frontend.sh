@@ -6,6 +6,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WEB_ROOT=/var/www/codeforge
 
+echo "Installing frontend dependencies (if needed)..."
+if [ ! -d "$ROOT/frontend/node_modules" ]; then
+    (cd "$ROOT/frontend" && npm ci)
+fi
+
 echo "Building frontend (production)..."
 (cd "$ROOT/frontend" && npm run build)
 
