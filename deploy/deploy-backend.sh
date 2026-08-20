@@ -14,6 +14,12 @@ UNIT_SRC="$ROOT/deploy/codeforge-api.service"
 UNIT_DST=/etc/systemd/system/codeforge-api.service
 export PATH="/usr/local/dotnet:$PATH"
 
+DOTNET_BIN="$(command -v dotnet || true)"
+if [ -z "$DOTNET_BIN" ]; then
+    echo "ERROR: dotnet not found on PATH (checked /usr/local/dotnet and system paths)." >&2
+    exit 1
+fi
+
 if [ ! -f "$ROOT/.secrets/env" ]; then
     echo "ERROR: $ROOT/.secrets/env is missing (DB connection string + JWT key)." >&2
     exit 1
@@ -22,8 +28,8 @@ fi
 echo "Publishing backend (Release)..."
 dotnet publish "$ROOT/backend/src/CodeForge.Api" -c Release -o "$STAGING" --nologo
 
-echo "Installing systemd unit..."
-cp "$UNIT_SRC" "$UNIT_DST"
+echo "Installing systemd unit (dotnet at $DOTNET_BIN)..."
+sed "s|__DOTNET__|$DOTNET_BIN|" "$UNIT_SRC" > "$UNIT_DST"
 systemctl daemon-reload
 systemctl enable codeforge-api > /dev/null 2>&1
 

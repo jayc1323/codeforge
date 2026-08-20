@@ -11,7 +11,7 @@ Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
 Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=ASPNETCORE_URLS=http://localhost:5045
 EnvironmentFile=/root/codeforge/.secrets/env
-ExecStart=/usr/local/dotnet/dotnet /opt/codeforge-api/CodeForge.Api.dll
+ExecStart=__DOTNET__ /opt/codeforge-api/CodeForge.Api.dll
 Restart=always
 RestartSec=5
 
