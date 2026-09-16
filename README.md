@@ -2,12 +2,12 @@
 
 [![.NET 8](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Angular 17](https://img.shields.io/badge/Angular-17-DD0031?logo=angular)](https://angular.io/)
-[![Docker](https://img.shields.io/badge/sandboxed%20with-Docker-2496ED?logo=docker)](https://www.docker.com/)
+[![Podman](https://img.shields.io/badge/sandboxed%20with-Podman-892CA0?logo=podman)](https://podman.io/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **[Live demo → coderunner.duckdns.org](https://coderunner.duckdns.org)** · **[Report an issue](https://github.com/jayc1323/codeforge/issues)**
 
-An online multi-language code execution platform. Write code in the browser (Monaco — the editor that powers VS Code), run it in an isolated Docker container, and watch output stream back live over WebSocket. Create an account to save snippets and keep your execution history.
+An online multi-language code execution platform. Write code in the browser (Monaco — the editor that powers VS Code), run it in an isolated container, and watch output stream back live over WebSocket. Create an account to save snippets and keep your execution history.
 
 ## Languages
 
@@ -25,7 +25,7 @@ Python · C++ · C# · F# · TypeScript — each with runtime-detected version d
        │ REST /api/*        │ WS /hubs/*       │ WS /lsp/python
        ▼                    ▼                  ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ Caddy (TLS, static files, reverse proxy)                        │
+│ nginx (TLS via Let's Encrypt, static files, reverse proxy)      │
 └─────────────────────────────────────────────────────────────────┘
        ▼
 ┌─────────────────────────────────────────────────────────────────┐
@@ -38,7 +38,7 @@ Python · C++ · C# · F# · TypeScript — each with runtime-detected version d
        ▼
 ┌──────────────────────────────┬──────────────────────────────────┐
 │ CodeForge.Core (domain)      │ Persistence (EF Core 8)          │
-│   LanguageRegistry           │   Azure SQL Database             │
+│   LanguageRegistry           │   SQLite / PostgreSQL            │
 │   IExecutionRunner/Queue/…   │   Executions · Snippets · Users  │
 └──────▲───────────────────────┴──────────────────────────────────┘
        │ implements
@@ -47,7 +47,7 @@ Python · C++ · C# · F# · TypeScript — each with runtime-detected version d
 │   ExecutionQueue (Channel) · ExecutionWorker (BackgroundService)│
 │   DockerRunner · LocalProcessRunner (dev) · EfExecutionStore    │
 └──────┬──────────────────────────────────────────────────────────┘
-       │ docker run (per execution)
+       │ podman run (per execution)
        ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ Throwaway container per execution                               │
@@ -64,7 +64,7 @@ Python · C++ · C# · F# · TypeScript — each with runtime-detected version d
 3. `DockerRunner` writes the submission to a temp dir, generates a phase script (`compile` → `run`, each with its own `timeout`), and starts a hardened container with only that dir mounted
 4. As the program prints, stdout/stderr chunks flow back live: `IExecutionProgress` → worker → `IExecutionEventPublisher` → SignalR group → browser (with 500ms polling as an automatic fallback)
 5. Phase attribution (compile error vs run timeout vs runtime failure) uses marker files + wall-clock disambiguation of GNU `timeout`'s exit-code-124 ambiguity
-6. Final state (status, capped output, exit code, duration) is persisted to Azure SQL and available via `GET /api/executions/{id}`
+6. Final state (status, capped output, exit code, duration) is persisted to the database and available via `GET /api/executions/{id}`
 
 ### LSP bridge
 
@@ -81,10 +81,10 @@ Python · C++ · C# · F# · TypeScript — each with runtime-detected version d
 | Frontend | Angular 17, Monaco editor, @microsoft/signalr |
 | Backend | .NET 8 ASP.NET Core, SignalR, Channel-based queue, rate limiting |
 | Auth | ASP.NET Core Identity, JWT bearer (HMAC-SHA256) |
-| Persistence | EF Core 8, Azure SQL Database |
+| Persistence | EF Core 8, SQLite (or PostgreSQL) |
 | Intelligence | Pyright (LSP) via custom WebSocket bridge |
-| Isolation | Docker (per-language images, custom TypeScript image) |
-| Serving | Caddy (auto Let's Encrypt TLS), systemd, UFW |
+| Isolation | Podman/Docker (per-language images, custom TypeScript image) |
+| Serving | nginx (Let's Encrypt TLS via certbot), systemd, firewalld |
 | Tests | xUnit (21 tests: runner behavior, isolation guarantees, streaming) |
 
 ## Run (dev)
@@ -100,16 +100,32 @@ cd frontend && npx ng serve --host 0.0.0.0 --port 80
 cd backend && dotnet test
 ```
 
-Requires: .NET 8 SDK, Node 22, Docker (for the sandboxed runner), and per-language toolchains for the local runner.
+Requires: .NET 8 SDK, Node 22, Podman or Docker (for the sandboxed runner), and per-language toolchains for the local runner.
 
 ## Deploy (production)
 
 ```bash
-./deploy/deploy-frontend.sh   # ng build → /var/www/codeforge (served by Caddy)
+./deploy/deploy-frontend.sh   # ng build → /var/www/codeforge (served by nginx)
 ./deploy/deploy-backend.sh    # dotnet publish → /opt/codeforge-api (systemd, health-checked)
 ```
 
-Caddy config lives in `deploy/Caddyfile` (copy to `/etc/caddy/Caddyfile`, then `systemctl reload caddy`). Secrets (DB connection string, JWT key) are read from `.secrets/env`, which is gitignored.
+nginx config lives in `/etc/nginx/conf.d/codeforge.conf`. Secrets (DB connection string, JWT key) are read from `/etc/codeforge/env` (or `.secrets/env` for local dev), which is gitignored.
+
+### nginx setup
+
+```bash
+# Install nginx and certbot
+sudo dnf install -y nginx
+sudo pip3 install certbot certbot-nginx
+
+# Get SSL certificate
+sudo certbot --nginx -d yourdomain.duckdns.org
+
+# Enable and start nginx
+sudo systemctl enable --now nginx
+```
+
+See `deploy/nginx.conf.example` for the full nginx configuration template.
 
 ## Roadmap
 

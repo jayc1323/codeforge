@@ -30,8 +30,8 @@ cleanup() {
 trap cleanup INT TERM
 
 echo ""
-echo "  API: http://159.203.182.167:5045  (log: $API_LOG)"
-echo "  UI:  http://159.203.182.167:80  (log: $UI_LOG)"
+echo "  API: http://localhost:5045  (log: $API_LOG)"
+echo "  UI:  http://localhost:80  (log: $UI_LOG)"
 echo ""
 echo "Press Ctrl+C to stop both."
 

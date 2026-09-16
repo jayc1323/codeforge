@@ -51,6 +51,11 @@ public sealed class DockerRunner(IOptions<DockerRunnerOptions> options) : IExecu
                     UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
                     UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute |
                     UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute);
+                
+                // Set SELinux context so containers can access the mounted directory
+                await ProcessRunner.RunAsync(
+                    "chcon", $"-R -t container_file_t \"{workDir}\"", workDir: null, standardInput: null,
+                    TimeSpan.FromSeconds(10), CancellationToken.None);
             }
 
             // Per-phase timeouts are enforced inside the container; the outer timeout is a safety net.
@@ -147,6 +152,8 @@ public sealed class DockerRunner(IOptions<DockerRunnerOptions> options) : IExecu
     {
         var containerName = $"codeforge-{Guid.NewGuid():N}";
 
+        // For local images (image IDs or localhost/), use --pull=never to avoid registry resolution
+        var pullFlag = image.StartsWith("localhost") || image.Length == 12 || !image.Contains("/") ? "--pull=never" : "--pull=missing";
         var arguments = string.Join(' ',
             "run --rm -i",
             $"--name {containerName}",
@@ -154,6 +161,7 @@ public sealed class DockerRunner(IOptions<DockerRunnerOptions> options) : IExecu
             $"--memory {_options.MemoryMb}m --memory-swap {_options.MemoryMb}m",
             $"--cpus {_options.CpuCount}",
             $"--pids-limit {_options.PidsLimit}",
+            pullFlag,
             "--read-only",
             "--tmpfs /tmp:rw,nosuid,size=64m",
             "--cap-drop ALL",

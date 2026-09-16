@@ -25,7 +25,7 @@ public static class DependencyInjection
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
             services.AddDbContextFactory<CodeForgeDbContext>(options =>
-                options.UseSqlServer(connectionString));
+                options.UseSqlite(connectionString));
             services.AddSingleton<IExecutionStore, EfExecutionStore>();
 
             services.AddIdentityCore<ApplicationUser>(options =>

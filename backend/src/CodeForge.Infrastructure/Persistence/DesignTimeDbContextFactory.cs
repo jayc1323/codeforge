@@ -18,7 +18,7 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Cod
                 "Set ConnectionStrings__CodeForge or create .secrets/dbconnectionstring.txt");
 
         var options = new DbContextOptionsBuilder<CodeForgeDbContext>()
-            .UseSqlServer(connectionString)
+            .UseSqlite(connectionString)
             .Options;
 
         return new CodeForgeDbContext(options);

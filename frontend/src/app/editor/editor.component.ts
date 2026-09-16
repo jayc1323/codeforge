@@ -84,10 +84,14 @@ export class EditorComponent implements OnInit, OnDestroy {
     });
 
     this.monaco = await this.monacoLoader.load();
+    // Dispose any existing model with the same URI to ensure fresh state
+    const uri = this.monaco.Uri.parse(PYTHON_LSP_URI);
+    const existingModel = this.monaco.editor.getModel(uri);
+    existingModel?.dispose();
     const model = this.monaco.editor.createModel(
       SAMPLES[this.selectedLanguage],
       MONACO_LANGUAGE[this.selectedLanguage],
-      this.monaco.Uri.parse(PYTHON_LSP_URI));
+      uri);
     this.editor = this.monaco.editor.create(this.editorContainer.nativeElement, {
       model,
       theme: this.monacoTheme,
@@ -128,6 +132,8 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.lspDispose?.();
+    // Dispose the model to prevent stale state when navigating back
+    this.editor?.getModel()?.dispose();
     this.editor?.dispose();
     clearInterval(this.pollTimer);
   }
@@ -138,6 +144,10 @@ export class EditorComponent implements OnInit, OnDestroy {
       this.monaco.editor.setModelLanguage(model, MONACO_LANGUAGE[this.selectedLanguage] ?? 'plaintext');
       model.setValue(SAMPLES[this.selectedLanguage] ?? '');
     }
+    // Clear previous execution state when switching languages
+    this.standardInput = '';
+    this.execution = null;
+    this.errorMessage = '';
     await this.startLspIfSupported();
   }
 

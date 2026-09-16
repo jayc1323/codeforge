@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the Angular frontend and publishes it to the Caddy web root.
+# Builds the Angular frontend and publishes it to the nginx web root.
 # Usage: ./deploy/deploy-frontend.sh
 set -euo pipefail
 
@@ -17,7 +17,12 @@ echo "Building frontend (production)..."
 echo "Publishing to $WEB_ROOT..."
 mkdir -p "$WEB_ROOT"
 rm -rf "$WEB_ROOT"/*
-cp -r "$ROOT/frontend/dist/codeforge-ui/browser/." "$WEB_ROOT/"
-chown -R caddy:caddy "$WEB_ROOT"
+# Angular 17+ outputs to browser/ subdirectory
+if [ -d "$ROOT/frontend/dist/codeforge-ui/browser" ]; then
+    cp -r "$ROOT/frontend/dist/codeforge-ui/browser/." "$WEB_ROOT/"
+else
+    cp -r "$ROOT/frontend/dist/codeforge-ui/." "$WEB_ROOT/"
+fi
+chown -R nginx:nginx "$WEB_ROOT"
 
-echo "Done. Caddy serves the new build immediately (no reload needed for static files)."
+echo "Done. nginx serves the new build immediately (no reload needed for static files)."

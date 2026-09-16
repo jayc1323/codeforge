@@ -6,11 +6,11 @@ public sealed class DockerRunnerOptions
 
     public Dictionary<string, string> Images { get; set; } = new()
     {
-        ["python"] = "python:3.12-slim",
-        ["cpp"] = "gcc:13",
+        ["python"] = "docker.io/library/python:3.12-slim",
+        ["cpp"] = "docker.io/library/gcc:13",
         ["csharp"] = "mcr.microsoft.com/dotnet/sdk:8.0",
         ["fsharp"] = "mcr.microsoft.com/dotnet/sdk:8.0",
-        ["typescript"] = "codeforge-typescript:latest"
+        ["typescript"] = "localhost/codeforge-typescript:latest"
     };
 
     public int MemoryMb { get; set; } = 256;
