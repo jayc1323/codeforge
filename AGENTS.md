@@ -116,6 +116,7 @@ DONE:
 - **Node.js 22**: installed via dnf module enable nodejs:22
 - **Containers**: Podman 5.8.2 with podman-docker compatibility (docker command available via podman)
 - **Languages**: python3, g++ 13 available via dnf; NO ghc
+- **LSP**: pyright 1.1.414 installed globally via `sudo npm install -g pyright` for Python IntelliSense; TypeScript uses Monaco's built-in language service
 - **Web server**: nginx 1.20.1 (instead of Caddy), configured at /etc/nginx/conf.d/codeforge.conf
 - **SSL**: Let's Encrypt via certbot (installed via pip, not in Oracle repos)
 - **SELinux**: Enforcing, httpd_can_network_connect=1 for nginx -> backend proxy, container_file_t for mounted dirs
