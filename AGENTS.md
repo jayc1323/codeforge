@@ -56,6 +56,9 @@ docker ps -a                                   # leftover containers (should be 
 7. **DB connection issues** — SQLite is local file-based, no network connectivity needed. If migrated to PostgreSQL, ensure firewall allows the database port and connection string is correct.
 8. **SELinux blocking container access** — Podman needs `chcon -R -t container_file_t` on mounted directories. DockerRunner now sets this automatically.
 9. **TypeScript "image not known" error** — The codeforge-typescript image must be built in root's Podman storage since the systemd service runs as root. User-built images (e.g., as `opc`) are invisible to root. Fix: `sudo podman build -t localhost/codeforge-typescript:latest /home/opc/codeforge/docker/typescript/`. The image name must be `localhost/codeforge-typescript:latest` with `--pull=never` to prevent Podman from trying to pull from a registry.
+10. **`GET /api/executions/mine` returns 500** — SQLite EF Core provider cannot translate `DateTimeOffset` in `ORDER BY` clauses. Fixed by splitting the query: filter `Where` server-side (SQL), then `OrderByDescending` + `Select` client-side (LINQ-to-Objects). Result set is naturally tiny per user (<=200 rows), so this is performant.
+11. **Frontend state leaking across language changes / navigation** — `onLanguageChange` now resets `standardInput`, `execution` (output), and `errorMessage`. `ngOnDestroy` disposes the Monaco editor model to prevent stale state when navigating back to `/app`.
+12. **Pyright not found by systemd service** — `pyright-langserver` was installed via npm (in `/usr/local/bin`), but systemd's default PATH is `/sbin:/bin:/usr/sbin:/usr/bin`. The systemd unit must include `Environment=PATH=/usr/local/bin:/usr/bin:/bin`.
 
 ### Quick E2E smoke test (run after any deploy/migration)
 ```bash
@@ -68,6 +71,12 @@ curl -s -X POST https://coderunner.duckdns.org/api/executions \
 
 # Test the frontend serves correctly
 curl -s https://coderunner.duckdns.org/ | grep -q "CodeForge" && echo "Frontend OK"
+
+# Test auth + history
+curl -s -X POST https://coderunner.duckdns.org/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"TestPassword123"}'
+# Then login -> submit execution with Bearer token -> GET /api/executions/mine should return list
 ```
 
 ## Test
@@ -87,7 +96,7 @@ cd backend && dotnet test
 - Store is in-memory; swap for a real DB later.
 - Known cosmetic issue: F# in offline container prints "An issue was encountered verifying workloads" to stdout before program output.
 
-## Progress (as of 2026-09-16)
+## Progress (as of 2026-09-20)
 DONE:
 - [x] .NET 8 backend: Api / Core / Infrastructure layers, xUnit tests (21 passing)
 - [x] SignalR live streaming: output chunks pushed as produced (verified ~1s apart over ws through the proxy), polling kept as fallback
@@ -101,14 +110,19 @@ DONE:
 - [x] Auth: ASP.NET Core Identity (email+password, min 8 chars) + JWT bearer (HMAC-SHA256, 7-day expiry, Jwt:SigningKey in .secrets/env). POST /api/auth/register + /api/auth/login -> {token, email, expiresAt}. SnippetsController fully [Authorize]; executions allow guests but record UserId when a token is present. GET /api/executions/mine = per-user history (paginated, latest first).
 - [x] Frontend auth: /auth route (login/register card, same visual style as home), AuthService (token in localStorage, user$ BehaviorSubject), authInterceptor attaches Bearer to /api requests. Editor toolbar shows user email + logout when logged in, "Login to save" link when guest. Side pane gets Run/Snippets/History tabs when logged in: save current editor content as a titled snippet, load/delete snippets, browse + restore past executions (sourceCode + stdin restored into the editor). ExecutionResponse now includes sourceCode/standardInput to support restore. Home page: "Start coding" (guest) + "Login" buttons.
 - [x] **Oracle VM deployment**: Migrated from Azure VM to Oracle Linux 9.8 VM. Uses nginx (instead of Caddy) for HTTPS/reverse proxy, SQLite (instead of Azure SQL) for database, Podman (instead of Docker) for containerization. SELinux configured for container access.
+- [x] **Frontend bug fixes**: State properly cleared on language change; Monaco model disposed on destroy to prevent stale content.
+- [x] **SQLite DateTimeOffset fix**: Execution history endpoint works after splitting server-side filter from client-side ordering.
+- [x] **Architecture documentation**: Complete system overview, request-response lifecycle, security layers, data flow in `docs/architecture.md`.
+- [ ] Thin MCP wrapper for programmatic/agent access — **NEXT UP**
 
 ## Next steps (priority order)
-1. Full IntelliSense for other languages: add clangd (C/C++), csharp-ls, fsautocomplete to LspBridge.Servers + frontend languageId mapping. Same LspClient/monaco-lsp wiring — just register per language.
-2. Warm container pool: `docker exec` into pre-warmed containers (~0.19s vs ~0.9s spin-up); needs between-run hygiene (wipe /work+/tmp, kill stray PIDs) and pool lifecycle management
-3. Shareable snippet links: public URL /s/{id} for snippets (needs an IsPublic flag + unauthenticated GET endpoint)
-4. AI add-on: endpoint that sends failed executions (source + stderr) to an LLM for error explanations (the agentic feature)
-5. Add Haskell to LanguageRegistry (requires ghc install)
-6. Migrate to Oracle PostgreSQL: set up VCN peering or move VM to same VCN as the PostgreSQL database
+1. **Thin MCP wrapper** for programmatic/agent access: API key auth + sync execution endpoint + small Node.js stdio MCP server exposing `execute_code` tool.
+2. Full IntelliSense for other languages: add clangd (C/C++), csharp-ls, fsautocomplete to LspBridge.Servers + frontend languageId mapping.
+3. Warm container pool: `docker exec` into pre-warmed containers (~0.19s vs ~0.9s spin-up).
+4. Shareable snippet links: public URL /s/{id} for snippets.
+5. AI add-on: endpoint that sends failed executions to an LLM for error explanations.
+6. Add Haskell to LanguageRegistry (requires ghc install).
+7. Migrate to Oracle PostgreSQL: set up VCN peering or move VM to same VCN.
 
 ## Environment
 - **Oracle VM**: Oracle Linux 9.8, 8 vCPU / 30GB RAM, 6GB swap (much more powerful than previous hosts)
