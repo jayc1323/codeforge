@@ -59,9 +59,14 @@ public class ExecutionsController(IExecutionQueue queue, IExecutionStore store) 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var executions = await context.Executions
+        // SQLite cannot translate DateTimeOffset in ORDER BY, so we filter server-side
+        // and do ordering/projection client-side (result set is naturally small per user).
+        var raw = await context.Executions
             .AsNoTracking()
             .Where(e => e.UserId == userId)
+            .ToListAsync(cancellationToken);
+
+        var executions = raw
             .OrderByDescending(e => e.CreatedAt)
             .Take(take)
             .Select(e => new
@@ -75,7 +80,7 @@ public class ExecutionsController(IExecutionQueue queue, IExecutionStore store) 
                 e.CompletedAt,
                 SourcePreview = e.SourceCode.Substring(0, Math.Min(200, e.SourceCode.Length))
             })
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         return Ok(executions);
     }
